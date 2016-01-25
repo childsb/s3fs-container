@@ -20,3 +20,6 @@ Example:
 ```
 The docker container launches and remains running.  To stop you can ctrl+c.  While the container is running the bucket remains mounted.  You can now access the s3 bucket as a local directory!
 
+# s3fs-fuse
+The container uses s3fs-fuse found here: https://github.com/s3fs-fuse/s3fs-fuse
+
