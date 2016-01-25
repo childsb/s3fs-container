@@ -1,5 +1,5 @@
 # s3fs-mount-container
-This docker container uses the s3fs packge to FUSE mount s3 buckets.  The container is setup to export the s3 mount to the host.  Just run the container, and mount your s3 bucket with no extra packages!
+This docker container uses the s3fs packge to FUSE mount s3 buckets.  The container is setup to export the s3 mount to host.  Just run the container, and mount your s3 bucket with no extra packages!
 
 # Usage
 This container uses a new feature in Docker 1.10 which allows a contiainer to share the hosts mount namespace.  Once docker is up and running you can build the container with b.sh.
@@ -14,9 +14,9 @@ To mount a s3 bucket run:
 ./mount.sh bucket mountpoint
 ```
 
-example:
+Example:
 ```bash
 ./mount.sh snuffy /mnt/snuffy
 ```
-You'll see the docker container launch and remain running.  To stop you can ctrl+c.  While the container is running the bucket is mounted at the given mount point.  You can now access your s3 bucket as a local directory!
+The docker container launches and remains running.  To stop you can ctrl+c.  While the container is running the bucket remains mounted.  You can now access the s3 bucket as a local directory!
 
