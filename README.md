@@ -1,4 +1,4 @@
-# s3fs-mount-container
+# s3fs-container
 This docker container uses the s3fs packge to FUSE mount s3 buckets.  The container is setup to export the s3 mount to host.  Just run the container, and mount your s3 bucket with no extra packages!
 
 # Usage
