@@ -96,8 +96,8 @@ echo "unmount() called" >> /tmp/s3fs-container.log
 }
 
 
-echo "--------------------------------------------------------------`date`------------------------------------"
-echo $# >> /tmp/s3fs-container.log
+echo "--------------------------------------------------------------`date`------------------------------------" >> /tmp/s3fs-container.log
+echo $@ >> /tmp/s3fs-container.log
 
 op=$1
 
