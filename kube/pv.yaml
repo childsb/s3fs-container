@@ -8,6 +8,5 @@ spec:
   accessModes:
     - ReadWriteMany
   flexVolume:
-    # FIXME: use the right IP
-    driver: "kubernetes.io/s3fs-container.sh"
+    driver: s3fs-container
    

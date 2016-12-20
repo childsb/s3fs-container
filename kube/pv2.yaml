@@ -1,22 +1,13 @@
 apiVersion: v1
-kind: Pod
+kind: PersistentVolume
 metadata:
-  name: nginx
+  name: s3fs-pv
 spec:
-  containers:
-  - name: nginx
-    image: nginx
-    volumeMounts:
-    - name: test
-      mountPath: /data
-    ports:
-    - containerPort: 80
-  volumes:
-  - name: test
-    flexVolume:
-      driver: "kubernetes.io/s3fs-container.sh"
-      options:
-        Name: "vol1"
-        Keyname: "1000m"
-        Key: "kube_vg"
-
+  capacity:
+    storage: 1Gi 
+  accessModes:
+    - ReadWriteMany
+  flexVolume:
+    # FIXME: use the right IP
+    driver: "kubernetes.io/s3fs-container.sh"
+   
