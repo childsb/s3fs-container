@@ -28,20 +28,7 @@ ismounted() {
 }
 
 attach() {
-	VOLUMEID=$(echo $1 | jq -r '.volumeID')
-	SIZE=$(echo $1 | jq -r '.size')
-	VG=$(echo $1|jq -r '.volumegroup')
 
-	# LVM substitutes - with --
-	VOLUMEID=`echo $VOLUMEID|sed s/-/--/g`
-	VG=`echo $VG|sed s/-/--/g`
-
-	DMDEV="/dev/mapper/${VG}-${VOLUMEID}"
-	if [ ! -b "${DMDEV}" ]; then
-		err "{\"status\": \"Failure\", \"message\": \"Volume ${VOLUMEID} does not exist\"}"
-		exit 1
-	fi
-	log "{\"status\": \"Success\", \"device\":\"${DMDEV}\"}"
 	exit 0
 }
 
