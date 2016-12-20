@@ -19,6 +19,8 @@ log() {
 }
 
 ismounted() {
+    echo "ismounted() called" >> /tmp/s3fs-container.log
+
 	MOUNT=`findmnt -n ${MNTPATH} 2>/dev/null | cut -d' ' -f1`
 	if [ "${MOUNT}" == "${MNTPATH}" ]; then
 		echo "1"
@@ -28,16 +30,18 @@ ismounted() {
 }
 
 attach() {
-
+echo "attach() called" >> /tmp/s3fs-container.log
 	exit 0
 }
 
 detach() {
+echo "detach() called" >> /tmp/s3fs-container.log
 	log "{\"status\": \"Success\"}"
 	exit 0
 }
 
 domount() {
+echo "domount() called" >> /tmp/s3fs-container.log
 	MNTPATH=$1
 	DMDEV=$2
 	FSTYPE=$(echo $3|jq -r '.["kubernetes.io/fsType"]')
@@ -73,6 +77,7 @@ domount() {
 }
 
 unmount() {
+echo "unmount() called" >> /tmp/s3fs-container.log
 	MNTPATH=$1
 	if [ $(ismounted) -eq 0 ] ; then
 		log "{\"status\": \"Success\"}"
@@ -89,6 +94,10 @@ unmount() {
 	log "{\"status\": \"Success\"}"
 	exit 0
 }
+
+
+echo "--------------------------------------------------------------`date`------------------------------------"
+echo $# >> /tmp/s3fs-container.log
 
 op=$1
 
