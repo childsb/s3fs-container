@@ -9,4 +9,7 @@ spec:
     - ReadWriteMany
   flexVolume:
     driver: s3fs-container
-   
+    options:
+      S3User: myuser
+      S3Secret: mysecret
+      bucket: snuffy

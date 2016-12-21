@@ -46,42 +46,26 @@ domount() {
 	MNTPATH=$1
 
 	FSTYPE=$(echo $2|jq -r '.["kubernetes.io/fsType"]')
-	CONTAINER=$(echo $2|jq -r '.["container"]')
+	BUCKET=$(echo $2|jq -r '.["bucket"]')
 	S3User=$(echo $2|jq -r '.["S3User"]')
 	S3Secret=$(echo $2|jq -r '.["S3Secret"]')
-
-	if [ ! -b "${DMDEV}" ]; then
-		err "{\"status\": \"Failure\", \"message\": \"${DMDEV} does not exist\"}"
-		exit 1
-	fi
 
 	if [ $(ismounted) -eq 1 ] ; then
 		log "{\"status\": \"Success\"}"
 		exit 0
 	fi
 
-	VOLFSTYPE=`blkid -o udev ${DMDEV} 2>/dev/null|grep "ID_FS_TYPE"|cut -d"=" -f2`
-	if [ "${VOLFSTYPE}" == "" ]; then
-		mkfs -t ${FSTYPE} ${DMDEV} >/dev/null 2>&1
-		if [ $? -ne 0 ]; then
-			err "{ \"status\": \"Failure\", \"message\": \"Failed to create fs ${FSTYPE} on device ${DMDEV}\"}"
-			exit 1
-		fi
-	fi
+    mkdir -p ${MNTPATH} &> /dev/null
 
-	mkdir -p ${MNTPATH} &> /dev/null
+    docker run --privileged -e S3User=$S3User -e S3Secret=$S3Secret -v ${MNTPATH}:/mnt/mountpoint:shared --cap-add SYS_ADMIN s3fs ${BUCKET} /mnt/mountpoint -o passwd_file=/etc/passwd-s3fs -d -d -f -o f2 -o curldbg
 
-	mount ${DMDEV} ${MNTPATH} &> /dev/null
-	if [ $? -ne 0 ]; then
-		err "{ \"status\": \"Failure\", \"message\": \"Failed to mount device ${DMDEV} at ${MNTPATH}\"}"
-		exit 1
-	fi
-	log "{\"status\": \"Success\"}"
+    log "{\"status\": \"Success\"}"
+
 	exit 0
 }
 
 unmount() {
-echo "unmount() called" >> /tmp/s3fs-container.log
+    echo "unmount() called" >> /tmp/s3fs-container.log
 	MNTPATH=$1
 	if [ $(ismounted) -eq 0 ] ; then
 		log "{\"status\": \"Success\"}"
