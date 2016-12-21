@@ -30,21 +30,25 @@ ismounted() {
 }
 
 attach() {
-echo "attach() called" >> /tmp/s3fs-container.log
+    echo "attach() called" >> /tmp/s3fs-container.log
+    log "{\"status\": \"Success\"}"
 	exit 0
 }
 
 detach() {
-echo "detach() called" >> /tmp/s3fs-container.log
+    echo "detach() called" >> /tmp/s3fs-container.log
 	log "{\"status\": \"Success\"}"
 	exit 0
 }
 
 domount() {
-echo "domount() called" >> /tmp/s3fs-container.log
+    echo "domount() called" >> /tmp/s3fs-container.log
 	MNTPATH=$1
-	DMDEV=$2
-	FSTYPE=$(echo $3|jq -r '.["kubernetes.io/fsType"]')
+
+	FSTYPE=$(echo $2|jq -r '.["kubernetes.io/fsType"]')
+	CONTAINER=$(echo $2|jq -r '.["container"]')
+	S3User=$(echo $2|jq -r '.["S3User"]')
+	S3Secret=$(echo $2|jq -r '.["S3Secret"]')
 
 	if [ ! -b "${DMDEV}" ]; then
 		err "{\"status\": \"Failure\", \"message\": \"${DMDEV} does not exist\"}"
@@ -130,3 +134,4 @@ case "$op" in
 esac
 
 exit 1
+
