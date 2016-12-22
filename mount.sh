@@ -6,7 +6,7 @@
 if [[ $# -lt 2 ]]
 then
   echo
-  echo "set S3User and S3Secret env then.."
+  echo "set aws_access_key_id and aws_secret_access_key env then.."
   echo 
   echo "Usage: $0 bucket mountpoint"
   echo 
@@ -16,4 +16,10 @@ then
   exit
 fi
 
-docker run --privileged -e S3User=$S3User -e S3Secret=$S3Secret -v $2:/mnt/mountpoint:shared --cap-add SYS_ADMIN s3fs $1 /mnt/mountpoint -o passwd_file=/etc/passwd-s3fs -d -d -f -o f2 -o curldbg
+CONTAINER_ID=docker run --privileged -d -e S3User=$aws_access_key
+                                        -e S3Secret=$aws_secret_access_key
+                                        -v $2:/mnt/mountpoint:shared
+                                        --cap-add SYS_ADMIN
+                        s3fs $1 /mnt/mountpoint -o passwd_file=/etc/passwd-s3fs -d -d -f -o f2 -o curldbg
+
+echo "Container running as ID ${CONTAINER_ID}"
