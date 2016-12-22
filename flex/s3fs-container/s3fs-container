@@ -21,11 +21,11 @@ log() {
 ismounted() {
     echo "ismounted() called" >> /tmp/s3fs-container.log
 
-	MOUNT=`findmnt -n ${MNTPATH} 2>/dev/null | cut -d' ' -f1`
-	if [ "${MOUNT}" == "${MNTPATH}" ]; then
-		echo "1"
-	else
+	CONTAINER=`docker ps --filter "label=flex.mount.path=${MNTPATH}" --format "{{.ID}}"`
+	if [ "${CONTAINER}" == "" ]; then
 		echo "0"
+	else
+		echo "1"
 	fi
 }
 
@@ -63,7 +63,7 @@ domount() {
 
     mkdir -p ${MNTPATH} &> /dev/null
 
-    DOCKER_OUT=`docker run -d --privileged -e S3User=${AWS_ACCESS_KEY_ID} -e S3Secret=${AWS_SECRET_ACCESS_KEY} -v ${MNTPATH}:/mnt/mountpoint:shared --cap-add SYS_ADMIN s3fs ${BUCKET} /mnt/mountpoint -o passwd_file=/etc/passwd-s3fs -d -d -f -o f2 -o curldbg`
+    DOCKER_OUT=`docker run -d --privileged -l flex.mount.path=${MNTPATH} -e S3User=${AWS_ACCESS_KEY_ID} -e S3Secret=${AWS_SECRET_ACCESS_KEY} -v ${MNTPATH}:/mnt/mountpoint:shared --cap-add SYS_ADMIN s3fs ${BUCKET} /mnt/mountpoint -o passwd_file=/etc/passwd-s3fs -d -d -f -o f2 -o curldbg`
     echo "domount() docker container output: ${DOCKER_OUT}" >> /tmp/s3fs-container.log
     log "{\"status\": \"Success\", \"docker-out\":\"${DOCKER_OUT}\"}"
 
@@ -78,13 +78,11 @@ unmount() {
 		log "{\"status\": \"Success\"}"
 		exit 0
 	fi
-
-	umount ${MNTPATH} &> /dev/null
-	if [ $? -ne 0 ]; then
-		err "{ \"status\": \"Failed\", \"message\": \"Failed to unmount volume at ${MNTPATH}\"}"
-		exit 1
-	fi
-	rmdir ${MNTPATH} &> /dev/null
+        
+        CONTAINER=`docker ps --filter "label=flex.mount.path=${MNTPATH}" --format "{{.ID}}"`
+        echo "unmount() called killing container ${CONTAINER}" >> /tmp/s3fs-container.log
+	docker rm ${CONTAINER}
+        rmdir ${MNTPATH} &> /dev/null
 
 	log "{\"status\": \"Success\"}"
 	exit 0

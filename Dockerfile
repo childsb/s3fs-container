@@ -3,6 +3,10 @@
 
 FROM centos:7
 MAINTAINER bradley childs, bchilds@gmail.com
+
+# Container mount path used for backtracking the container / mount 
+LABEL flex.mount.path="none"
+
 RUN yum update -y ; yum install automake fuse-devel gcc-c++ git libcurl-devel libxml2-devel make openssl-devel -y
 RUN mkdir -p /root
 WORKDIR /root
