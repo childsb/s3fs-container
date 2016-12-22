@@ -47,27 +47,34 @@ domount() {
 
 	FSTYPE=$(echo $2|jq -r '.["kubernetes.io/fsType"]')
 	BUCKET=$(echo $2|jq -r '.["bucket"]')
-	S3User=$(echo $2|jq -r '.["S3User"]')
-	S3Secret=$(echo $2|jq -r '.["S3Secret"]')
+	AWS_ACCESS_KEY_ID=$(echo $2|jq -r '.["AWS_ACCESS_KEY_ID"]')
+	AWS_SECRET_ACCESS_KEY=$(echo $2|jq -r '.["AWS_SECRET_ACCESS_KEY"]')
+
+
+  echo "domount() called aws_access_key_id: ${AWS_ACCESS_KEY_ID}" >> /tmp/s3fs-container.log
+    echo "domount() called aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}" >> /tmp/s3fs-container.log
+      echo "domount() called BUCKET: ${BUCKET}" >> /tmp/s3fs-container.log
 
 	if [ $(ismounted) -eq 1 ] ; then
+	    echo "domount() called, returning as its already mounted!  ${MNTPATH} " >> /tmp/s3fs-container.log
 		log "{\"status\": \"Success\"}"
 		exit 0
 	fi
 
     mkdir -p ${MNTPATH} &> /dev/null
 
-    docker run --privileged -e S3User=$S3User -e S3Secret=$S3Secret -v ${MNTPATH}:/mnt/mountpoint:shared --cap-add SYS_ADMIN s3fs ${BUCKET} /mnt/mountpoint -o passwd_file=/etc/passwd-s3fs -d -d -f -o f2 -o curldbg
-
-    log "{\"status\": \"Success\"}"
+    DOCKER_OUT=`docker run -d --privileged -e S3User=${AWS_ACCESS_KEY_ID} -e S3Secret=${AWS_SECRET_ACCESS_KEY} -v ${MNTPATH}:/mnt/mountpoint:shared --cap-add SYS_ADMIN s3fs ${BUCKET} /mnt/mountpoint -o passwd_file=/etc/passwd-s3fs -d -d -f -o f2 -o curldbg`
+    echo "domount() docker container output: ${DOCKER_OUT}" >> /tmp/s3fs-container.log
+    log "{\"status\": \"Success\", \"docker-out\":\"${DOCKER_OUT}\"}"
 
 	exit 0
 }
 
 unmount() {
-    echo "unmount() called" >> /tmp/s3fs-container.log
+        echo "unmount() called" >> /tmp/s3fs-container.log
 	MNTPATH=$1
 	if [ $(ismounted) -eq 0 ] ; then
+                echo "unmount() called, but already unmounted " >> /tmp/s3fs-container.log
 		log "{\"status\": \"Success\"}"
 		exit 0
 	fi

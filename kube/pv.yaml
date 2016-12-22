@@ -10,6 +10,6 @@ spec:
   flexVolume:
     driver: s3fs-container
     options:
-      S3User: myuser
-      S3Secret: mysecret
-      bucket: snuffy
+      AWS_ACCESS_KEY_ID: your_key_id
+      AWS_SECRET_ACCESS_KEY: your_secret
+      bucket: test-bucket-02-kube 
