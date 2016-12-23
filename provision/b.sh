@@ -1,2 +1,2 @@
 #!/bin/sh
-docker build -t aws_cli:latest .
+docker build -t childsb/s3fs-provisioner:latest .

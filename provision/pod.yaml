@@ -1,0 +1,12 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: s3fs-provisioner
+spec:
+  containers:
+    - name: s3fs-provisioner
+      image: childsb/s3fs-provisioner
+      args:
+        - "-provisioner=external/s3fs/simple"
+        - "-grace-period=0"
+      imagePullPolicy: "IfNotPresent"

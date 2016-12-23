@@ -47,5 +47,5 @@ RUN ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 # RUN chmod +x /root/aws.sh
 
 # ENTRYPOINT ["/root/aws.sh"]
-ENTRYPOINT ["/opt/src/github.com/childsb/s3fs-container/provision"]
+ENTRYPOINT ["/opt/src/github.com/childsb/s3fs-container/s3fs-container"]
 
