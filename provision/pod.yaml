@@ -7,6 +7,6 @@ spec:
     - name: s3fs-provisioner
       image: childsb/s3fs-provisioner
       args:
-        - "-provisioner=external/s3fs/simple"
-        - "-grace-period=0"
+        - "-provisioner=external/s3fs-simple"
+        - "-execCommand=/opt/go/src/github.com/childsb/s3fs-container/flex/s3fs-container/s3fs-container "
       imagePullPolicy: "IfNotPresent"

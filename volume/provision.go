@@ -17,6 +17,7 @@ limitations under the License.
 package volume
 
 import (
+	"encoding/json"
 	"github.com/golang/glog"
 	"fmt"
 	//"io/ioutil"
@@ -33,8 +34,7 @@ import (
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/types"
 	//"k8s.io/client-go/pkg/util/uuid"
-	"os"
-	"reflect"
+
 )
 
 const (
@@ -72,18 +72,18 @@ const (
 	nodeEnv      = "NODE_NAME"
 )
 
-func News3FSProvisioner(client kubernetes.Interface) controller.Provisioner {
-	return newS3fsProvisionerInternal(client)
+func News3FSProvisioner(client kubernetes.Interface, execCommand string) controller.Provisioner {
+	return newS3fsProvisionerInternal(client, execCommand)
 }
 
-func newS3fsProvisionerInternal(client kubernetes.Interface) *s3fsProvisioner {
+func newS3fsProvisionerInternal(client kubernetes.Interface, execCommand string) *s3fsProvisioner {
 	var identity types.UID
 
 
 	provisioner := &s3fsProvisioner{
 
 		client:       client,
-
+		execCommand:	execCommand,
 		identity:     identity,
 		podIPEnv:     podIPEnv,
 		serviceEnv:   serviceEnv,
@@ -99,8 +99,8 @@ type s3fsProvisioner struct {
 	// Client, needed for getting a service cluster IP to put as the S3FS server of
 	// provisioned PVs
 	client kubernetes.Interface
-
-	// Identity of this s3fsProvisioner, generated & persisted to exportDir or
+	execCommand string
+// Identity of this s3fsProvisioner, generated & persisted to exportDir or
 	// recovered from there. Used to mark provisioned PVs
 	identity types.UID
 
@@ -118,7 +118,7 @@ var _ controller.Provisioner = &s3fsProvisioner{}
 // Provision creates a volume i.e. the storage asset and returns a PV object for
 // the volume.
 func (p *s3fsProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
-	 err := p.createVolume(options)
+	err := p.createVolume(options)
 	if err != nil {
 		return nil, err
 	}
@@ -143,9 +143,15 @@ func (p *s3fsProvisioner) Provision(options controller.VolumeOptions) (*v1.Persi
 				v1.ResourceName(v1.ResourceStorage): options.Capacity,
 			},
 			PersistentVolumeSource: v1.PersistentVolumeSource{
-				NFS: &v1.NFSVolumeSource{
-					Server:   "",
-					Path:     "",
+
+				FlexVolume: &v1.FlexVolumeSource{
+					Driver: "s3fs",
+					Options: map[string]string{
+						"AWS_ACCESS_KEY_ID":"",
+						"AWS_SECRET_ACCESS_KEY":"",
+						"bucket":"",
+					},
+
 					ReadOnly: false,
 				},
 			},
@@ -183,13 +189,35 @@ func (p *s3fsProvisioner) validateOptions(options controller.VolumeOptions) (str
 	return gid, nil
 }
 
-func (p *s3fsProvisioner) createVolume(options controller.VolumeOptions) ( error) {
-	gid, err := p.validateOptions(options)
+func (p *s3fsProvisioner) createVolume(volumeOptions controller.VolumeOptions) ( error) {
+	gid, err := p.validateOptions(volumeOptions)
 	if err != nil {
 		return fmt.Errorf("error validating options for volume: %v", err)
 	}
 
-	glog.Infof("createVolume called..%v ", gid)
+	glog.Infof("createVolume called..%v %v", volumeOptions, gid)
+
+	var options string
+	wildBill, err := json.Marshal(volumeOptions)
+	if err != nil {
+		glog.Errorf("Failed to marshal plugin options, error: %s", err.Error())
+		return err
+	}
+	if len(wildBill) != 0 {
+		options = string(wildBill)
+	} else {
+		options = ""
+	}
+
+	// Executable provider command.
+	cmd := exec.Command(p.execCommand, options)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		glog.Errorf("Failed to mount volume %s, output: %s, error: %s",  output, err.Error())
+		//_, err := handleCmdResponse(mountCmd, output)
+		return err
+	}
+
 
 	return nil
 
@@ -221,84 +249,4 @@ func (p *s3fsProvisioner) createVolume(options controller.VolumeOptions) ( error
 
 		return server, path, 0, exportBlock, exportId, projectBlock, projectId, nil
 		*/
-}
-
-// getServer gets the server IP to put in a provisioned PV's spec.
-func (p *s3fsProvisioner) getServer() (string, error) {
-	// Use either `hostname -i` or podIPEnv as the fallback server
-	var fallbackServer string
-	podIP := os.Getenv(p.podIPEnv)
-	if podIP == "" {
-		out, err := exec.Command("hostname", "-i").Output()
-		if err != nil {
-			return "", fmt.Errorf("hostname -i failed with error: %v, output: %s", err, out)
-		}
-		fallbackServer = string(out)
-	} else {
-		fallbackServer = podIP
-	}
-
-	// Try to use the service's cluster IP as the server if serviceEnv is
-	// specified. If not, try to use nodeName if nodeEnv is specified (assume the
-	// pod is using hostPort). If not again, use fallback here.
-	serviceName := os.Getenv(p.serviceEnv)
-	if serviceName == "" {
-		nodeName := os.Getenv(p.nodeEnv)
-		if nodeName == "" {
-			glog.Infof("service env %s isn't set and neither is node env %s, using `hostname -i`/pod IP %s as S3FS server IP", p.serviceEnv, p.nodeEnv, fallbackServer)
-			return fallbackServer, nil
-		}
-		glog.Infof("service env %s isn't set and node env %s is, using node name %s as S3FS server IP", p.serviceEnv, p.nodeEnv, nodeName)
-		return nodeName, nil
-	}
-
-	// From this point forward, rather than fallback & provision non-persistent
-	// where persistent is expected, just return an error.
-	namespace := os.Getenv(p.namespaceEnv)
-	if namespace == "" {
-		return "", fmt.Errorf("service env %s is set but namespace env %s isn't; no way to get the service cluster IP", p.serviceEnv, p.namespaceEnv)
-	}
-	service, err := p.client.Core().Services(namespace).Get(serviceName)
-	if err != nil {
-		return "", fmt.Errorf("error getting service %s=%s in namespace %s=%s", p.serviceEnv, serviceName, p.namespaceEnv, namespace)
-	}
-
-	// Do some validation of the service before provisioning useless volumes
-	valid := false
-	type endpointPort struct {
-		port     int32
-		protocol v1.Protocol
-	}
-	expectedPorts := map[endpointPort]bool{
-		endpointPort{2049, v1.ProtocolTCP}:  true,
-		endpointPort{20048, v1.ProtocolTCP}: true,
-		endpointPort{111, v1.ProtocolUDP}:   true,
-		endpointPort{111, v1.ProtocolTCP}:   true,
-	}
-	endpoints, err := p.client.Core().Endpoints(namespace).Get(serviceName)
-	for _, subset := range endpoints.Subsets {
-		if len(subset.Addresses) != 1 {
-			continue
-		}
-		if subset.Addresses[0].IP != fallbackServer {
-			continue
-		}
-		actualPorts := make(map[endpointPort]bool)
-		for _, port := range subset.Ports {
-			actualPorts[endpointPort{port.Port, port.Protocol}] = true
-		}
-		if !reflect.DeepEqual(expectedPorts, actualPorts) {
-			continue
-		}
-		valid = true
-		break
-	}
-	if !valid {
-		return "", fmt.Errorf("service %s=%s is not valid; check that it has for ports %v one endpoint, this pod's IP %v", p.serviceEnv, serviceName, expectedPorts, fallbackServer)
-	}
-	if service.Spec.ClusterIP == v1.ClusterIPNone {
-		return "", fmt.Errorf("service %s=%s is valid but it doesn't have a cluster IP", p.serviceEnv, serviceName)
-	}
-
-	return service.Spec.ClusterIP, nil
 }

@@ -25,7 +25,13 @@ else
     endif
 endif
 
-all build:
-	go build
-.PHONY: all build
+container: build quick-container
+.PHONY: container
 
+quick-container:
+	docker build -t childsb/s3fs-provisioner:latest provisioner
+.PHONY: quick-container
+
+all build:
+	go build -o provision/
+.PHONY: all build

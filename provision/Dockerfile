@@ -13,21 +13,7 @@ RUN yum install -y less
 RUN yum install -y automake gcc-c++ git make openssl-devel golang
 
 # Build the S3FS provisioner
-RUN mkdir -p /root/
-WORKDIR  /root/
 
-ENV GOPATH /opt/
-ENV PATH $PATH:$GOPATH/bin
-
-RUN mkdir -p /opt/src/github.com/childsb
-
-WORKDIR  /opt/src/github.com/childsb/
-RUN git clone https://github.com/childsb/s3fs-container.git
-RUN go get github.com/kubernetes-incubator/nfs-provisioner
-RUN go get github.com/tools/godep
-
-WORKDIR  /opt/src/github.com/childsb/s3fs-container
-RUN make
 
 
 # Build the AWS CLI and create a bootstrap script
@@ -45,6 +31,20 @@ RUN ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 #          echo $aws_secret_access_key\n \
 #          exec /usr/local/bin/aws "$@"' > /root/aws.sh
 # RUN chmod +x /root/aws.sh
+
+# RUN mkdir -p /opt/src/github.com/childsb
+# WORKDIR  /opt/src/github.com/childsb/
+# ENV GOPATH /opt/
+# ENV PATH $PATH:$GOPATH/bin
+
+# RUN git clone https://github.com/childsb/s3fs-container.git
+# RUN go get github.com/kubernetes-incubator/nfs-provisioner
+# RUN go get github.com/tools/godep
+
+# WORKDIR  /opt/src/github.com/childsb/s3fs-container
+# RUN make
+RUN mkdir -p /opt/src/github.com/childsb/s3fs-container/
+COPY s3fs-container /opt/src/github.com/childsb/s3fs-container/
 
 # ENTRYPOINT ["/root/aws.sh"]
 ENTRYPOINT ["/opt/src/github.com/childsb/s3fs-container/s3fs-container"]
