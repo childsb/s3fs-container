@@ -29,9 +29,9 @@ container: build quick-container
 .PHONY: container
 
 quick-container:
-	docker build -t childsb/s3fs-provisioner:latest provisioner
+	docker build -t childsb/s3fs-provisioner:latest `pwd`/provisioner
 .PHONY: quick-container
 
 all build:
-	go build -o provision/
+	go build -o provision/s3fs-container
 .PHONY: all build
