@@ -37,15 +37,22 @@ RUN ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
 # ENV GOPATH /opt/
 # ENV PATH $PATH:$GOPATH/bin
 
+# install the shell flex script that the provisioner uses.
+RUN mkdir -p  /opt/go/src/github.com/childsb/s3fs-container/flex/s3fs-container
+COPY flex/s3fs-container/s3fs-container /opt/go/src/github.com/childsb/s3fs-container/flex/s3fs-container/
+
 # RUN git clone https://github.com/childsb/s3fs-container.git
 # RUN go get github.com/kubernetes-incubator/nfs-provisioner
 # RUN go get github.com/tools/godep
 
 # WORKDIR  /opt/src/github.com/childsb/s3fs-container
 # RUN make
-RUN mkdir -p /opt/src/github.com/childsb/s3fs-container/
-COPY s3fs-container /opt/src/github.com/childsb/s3fs-container/
+
+# install the go kube piece of provisioner
+RUN mkdir -p  /opt/go/src/github.com/childsb/s3fs-container/
+COPY s3fs-container /opt/go/src/github.com/childsb/s3fs-container/
+
 
 # ENTRYPOINT ["/root/aws.sh"]
-ENTRYPOINT ["/opt/src/github.com/childsb/s3fs-container/s3fs-container"]
+ENTRYPOINT ["/opt/go/src/github.com/childsb/s3fs-container/s3fs-container"]
 
