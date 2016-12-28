@@ -19,22 +19,11 @@ package volume
 import (
 
 	"github.com/golang/glog"
-	"fmt"
-	//"io/ioutil"
-	//"os"
 	"os/exec"
-	//"path"
-	"strconv"
-	"strings"
-	//"syscall"
-
-	//"github.com/golang/glog"
 	"github.com/childsb/s3fs-container/controller"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/types"
-	//"k8s.io/client-go/pkg/util/uuid"
-
 )
 
 const (
@@ -48,24 +37,6 @@ const (
 	annAwsAccessKeyId = "AWS_ACCESS_KEY_ID"
 	annAwsSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
 	annAwss3bucket = "bucket"
-
-	// A PV annotation for the entire ganesha EXPORT block or /etc/exports
-	// block, needed for deletion.
-	// annExportBlock = "EXPORT_block"
-	// A PV annotation for the exportId of this PV's backing ganesha/kernel export
-	// , needed for ganesha deletion and used for deleting the entry in exportIds
-	// map so the id can be reassigned.
-	//annExportId = "Export_Id"
-
-	// A PV annotation for the project quota info block, needed for quota
-	// deletion.
-	//annProjectBlock = "Project_block"
-	// A PV annotation for the project quota id, needed for quota deletion
-	//annProjectId = "Project_Id"
-
-	// VolumeGidAnnotationKey is the key of the annotation on the PersistentVolume
-	// object that specifies a supplemental GID.
-	VolumeGidAnnotationKey = "pv.beta.kubernetes.io/gid"
 
 	// A PV annotation for the identity of the s3fsProvisioner that provisioned it
 	annProvisionerId = "Provisioner_Id"
@@ -91,16 +62,9 @@ func newS3fsProvisionerInternal(client kubernetes.Interface, execCommand string)
 }
 
 type s3fsProvisioner struct {
-
-	// Client, needed for getting a service cluster IP to put as the S3FS server of
-	// provisioned PVs
 	client kubernetes.Interface
 	execCommand string
-// Identity of this s3fsProvisioner, generated & persisted to exportDir or
-	// recovered from there. Used to mark provisioned PVs
 	identity types.UID
-
-
 }
 
 var _ controller.Provisioner = &s3fsProvisioner{}
@@ -115,9 +79,7 @@ func (p *s3fsProvisioner) Provision(options controller.VolumeOptions, claim *v1.
 
 	annotations := make(map[string]string)
 	annotations[annCreatedBy] = createdBy
-	//if supGroup != 0 {
-	//	annotations[VolumeGidAnnotationKey] = strconv.FormatUint(supGroup, 10)
-//	}
+
 	annotations[annProvisionerId] = string(p.identity)
 
 	pv := &v1.PersistentVolume{
@@ -151,42 +113,7 @@ func (p *s3fsProvisioner) Provision(options controller.VolumeOptions, claim *v1.
 	return pv, nil
 }
 
-
-func (p *s3fsProvisioner) validateOptions(options controller.VolumeOptions) (string, error) {
-	gid := "none"
-	for k, v := range options.Parameters {
-		switch strings.ToLower(k) {
-		case "gid":
-			if strings.ToLower(v) == "none" {
-				gid = "none"
-			} else if i, err := strconv.ParseUint(v, 10, 64); err == nil && i != 0 {
-				gid = v
-			} else {
-				return "", fmt.Errorf("invalid value for parameter gid: %v. valid values are: 'none' or a non-zero integer", v)
-			}
-		default:
-			return "", fmt.Errorf("invalid parameter: %q", k)
-		}
-	}
-
-	// TODO implement options.ProvisionerSelector parsing
-	// pv.Labels MUST be set to match claim.spec.selector
-	// gid selector? with or without pv annotation?
-	if options.Selector != nil {
-		return "", fmt.Errorf("claim.Spec.Selector is not supported")
-	}
-
-	return gid, nil
-}
-
 func (p *s3fsProvisioner) createVolume(volumeOptions controller.VolumeOptions, claim *v1.PersistentVolumeClaim) (string, error) {
-	gid, err := p.validateOptions(volumeOptions)
-	if err != nil {
-		return "", fmt.Errorf("error validating options for volume: %v", err)
-	}
-
-	glog.Infof("createVolume called..%v %v", volumeOptions, gid)
-
 	s3bucket := claim.Annotations[annAwss3bucket]
 
 	if len(s3bucket)==0{
@@ -200,7 +127,6 @@ func (p *s3fsProvisioner) createVolume(volumeOptions controller.VolumeOptions, c
 		//_, err := handleCmdResponse(mountCmd, output)
 		return "", err
 	}
-
 
 	return s3bucket, nil
 

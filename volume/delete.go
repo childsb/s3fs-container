@@ -25,14 +25,8 @@ import (
 	"k8s.io/client-go/pkg/api/v1"
 )
 
-// Delete removes the directory that was created by Provision backing the given
-// PV and removes its export from the NFS server.
+
 func (p *s3fsProvisioner) Delete(volume *v1.PersistentVolume) error {
-	// Ignore the call if this provisioner was not the one to provision the
-	// volume. It doesn't even attempt to delete it, so it's neither a success
-	// (nil error) nor failure (any other error)
-
-
 	glog.Infof("Delete called for volume:" , volume.Name)
 
 	provisioned, err := p.provisioned(volume)
@@ -48,7 +42,6 @@ func (p *s3fsProvisioner) Delete(volume *v1.PersistentVolume) error {
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		glog.Errorf("Failed to delete volume %s, output: %s, error: %s",  volume.Spec.FlexVolume.Options[annAwss3bucket], output, err.Error())
-		//_, err := handleCmdResponse(mountCmd, output)
 		return err
 	}
 	return nil
