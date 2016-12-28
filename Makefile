@@ -28,6 +28,10 @@ endif
 container: build quick-container
 .PHONY: container
 
+clean:
+	rm -f s3fs-container
+.PHONY: clean
+
 quick-container:
 	docker build -t childsb/s3fs-provisioner:latest . 
 .PHONY: quick-container

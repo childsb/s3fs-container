@@ -1,13 +1,25 @@
 #!/bin/sh
 
+
+# Set this to true to log the call output to /tmp/s3fs-container
+INTERNAL_DEBUG=false
+
 usage() {
-	err "Invalid usage. Usage: "
-	err "\t$0 init"
-	err "\t$0 attach <json params>"
-	err "\t$0 detach <mount device>"
-	err "\t$0 mount <mount dir> <mount device> <json params>"
-	err "\t$0 unmount <mount dir>"
-	exit 1
+
+
+    echo "Invalid usage of s3 provisioner CLI.. :" >> /tmp/s3fs-container.log
+    echo $@ >> /tmp/s3fs-container.log
+
+    echo "Invalid usage/options of s3 provisioner CLI: ${@}"
+    echo $@
+	# err "Invalid usage. Usage: "
+	# err "\t$0 init"
+	# err "\t$0 attach <json params>"
+	# err "\t$0 detach <mount device>"
+	# err "\t$0 mount <mount dir> <mount device> <json params>"
+	# err "\t$0 unmount <mount dir>"
+	# err "\t$0 provision bucket awskey_id awskey"
+	# exit 1
 }
 
 err() {
@@ -27,6 +39,24 @@ ismounted() {
 	else
 		echo "1"
 	fi
+}
+
+provision(){
+    echo "provision() called" >> /tmp/s3fs-container.log
+    echo "using AWS_ACCESS_KEY_ID=${2} AWS_SECRET_ACCESS_KEY=${3}" >> /tmp/s3fs-container.log
+     #  provision bucket awskey_id awskey
+    AWS_PROVISION_COMMAND="AWS_ACCESS_KEY_ID=$2 AWS_SECRET_ACCESS_KEY=$3 /usr/local/bin/aws s3api create-bucket --bucket $1"
+    echo "provision() called, running command: ${AWS_PROVISION_COMMAND}" >> /tmp/s3fs-container.log
+    RESULT=`eval ${AWS_PROVISION_COMMAND}`
+    if [ $? -eq 0 ]; then
+          echo "provision() success: ${RESULT} " >> /tmp/s3fs-container.log
+          log "{\"status\": \"Success\"}"
+          exit 0
+    else
+       echo "provision failed with: $RESULT " >> /tmp/s3fs-container.log
+       err "{\"status\": \"Failure\", \"message\": \"${RESULT}\"}"
+       exit 1
+    fi
 }
 
 attach() {
@@ -99,18 +129,16 @@ if [ "$op" = "init" ]; then
 	exit 0
 fi
 
-if [ $# -lt 2 ]; then
-	usage
-fi
-
 shift
-
 case "$op" in
 	attach)
 		attach $*
 		;;
 	detach)
 		detach $*
+		;;
+	provision)
+		provision $*
 		;;
 	mount)
 		domount $*

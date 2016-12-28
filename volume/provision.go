@@ -17,7 +17,7 @@ limitations under the License.
 package volume
 
 import (
-	"encoding/json"
+
 	"github.com/golang/glog"
 	"fmt"
 	//"io/ioutil"
@@ -45,6 +45,10 @@ const (
 	annCreatedBy = "kubernetes.io/createdby"
 	createdBy    = "s3fs-dynamic-provisioner"
 
+	annAwsAccessKeyId = "AWS_ACCESS_KEY_ID"
+	annAwsSecretAccessKey = "AWS_SECRET_ACCESS_KEY"
+	annAwss3bucket = "bucket"
+
 	// A PV annotation for the entire ganesha EXPORT block or /etc/exports
 	// block, needed for deletion.
 	// annExportBlock = "EXPORT_block"
@@ -66,10 +70,7 @@ const (
 	// A PV annotation for the identity of the s3fsProvisioner that provisioned it
 	annProvisionerId = "Provisioner_Id"
 
-	podIPEnv     = "POD_IP"
-	serviceEnv   = "SERVICE_NAME"
-	namespaceEnv = "POD_NAMESPACE"
-	nodeEnv      = "NODE_NAME"
+
 )
 
 func News3FSProvisioner(client kubernetes.Interface, execCommand string) controller.Provisioner {
@@ -81,14 +82,9 @@ func newS3fsProvisionerInternal(client kubernetes.Interface, execCommand string)
 
 
 	provisioner := &s3fsProvisioner{
-
 		client:       client,
 		execCommand:	execCommand,
 		identity:     identity,
-		podIPEnv:     podIPEnv,
-		serviceEnv:   serviceEnv,
-		namespaceEnv: namespaceEnv,
-		nodeEnv:      nodeEnv,
 	}
 
 	return provisioner
@@ -104,21 +100,15 @@ type s3fsProvisioner struct {
 	// recovered from there. Used to mark provisioned PVs
 	identity types.UID
 
-	// Environment variables the provisioner pod needs valid values for in order to
-	// put a service cluster IP as the server of provisioned S3FS PVs, passed in
-	// via downward API. If serviceEnv is set, namespaceEnv must be too.
-	podIPEnv     string
-	serviceEnv   string
-	namespaceEnv string
-	nodeEnv      string
+
 }
 
 var _ controller.Provisioner = &s3fsProvisioner{}
 
 // Provision creates a volume i.e. the storage asset and returns a PV object for
 // the volume.
-func (p *s3fsProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
-	err := p.createVolume(options)
+func (p *s3fsProvisioner) Provision(options controller.VolumeOptions, claim *v1.PersistentVolumeClaim) (*v1.PersistentVolume, error) {
+	s3bucket, err := p.createVolume(options,claim)
 	if err != nil {
 		return nil, err
 	}
@@ -147,9 +137,9 @@ func (p *s3fsProvisioner) Provision(options controller.VolumeOptions) (*v1.Persi
 				FlexVolume: &v1.FlexVolumeSource{
 					Driver: "s3fs",
 					Options: map[string]string{
-						"AWS_ACCESS_KEY_ID":"",
-						"AWS_SECRET_ACCESS_KEY":"",
-						"bucket":"",
+						annAwsAccessKeyId:claim.Annotations[annAwsAccessKeyId],
+						annAwsSecretAccessKey:claim.Annotations[annAwsSecretAccessKey],
+						annAwss3bucket:s3bucket,
 					},
 
 					ReadOnly: false,
@@ -189,14 +179,15 @@ func (p *s3fsProvisioner) validateOptions(options controller.VolumeOptions) (str
 	return gid, nil
 }
 
-func (p *s3fsProvisioner) createVolume(volumeOptions controller.VolumeOptions) ( error) {
+func (p *s3fsProvisioner) createVolume(volumeOptions controller.VolumeOptions, claim *v1.PersistentVolumeClaim) (string, error) {
 	gid, err := p.validateOptions(volumeOptions)
 	if err != nil {
-		return fmt.Errorf("error validating options for volume: %v", err)
+		return "", fmt.Errorf("error validating options for volume: %v", err)
 	}
 
 	glog.Infof("createVolume called..%v %v", volumeOptions, gid)
 
+	/*
 	var options string
 	wildBill, err := json.Marshal(volumeOptions)
 	if err != nil {
@@ -208,45 +199,25 @@ func (p *s3fsProvisioner) createVolume(volumeOptions controller.VolumeOptions) (
 	} else {
 		options = ""
 	}
+	*/
 
 	// Executable provider command.
-	cmd := exec.Command(p.execCommand, options)
+
+	s3bucket := claim.Annotations[annAwss3bucket]
+
+	if len(s3bucket)==0{
+		s3bucket = volumeOptions.PVName
+	}
+
+	cmd := exec.Command(p.execCommand, "provision", s3bucket, claim.Annotations[annAwsAccessKeyId], claim.Annotations[annAwsSecretAccessKey] )
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		glog.Errorf("Failed to mount volume %s, output: %s, error: %s",  output, err.Error())
+		glog.Errorf("Failed to create volume %s, output: %s, error: %s",  claim.Annotations[annAwss3bucket], output, err.Error())
 		//_, err := handleCmdResponse(mountCmd, output)
-		return err
+		return "", err
 	}
 
 
-	return nil
+	return s3bucket, nil
 
-	/*
-		server, err := p.getServer()
-
-		if err != nil {
-			return "", "", 0, "", 0, "", 0, fmt.Errorf("error getting S3FS server IP for volume: %v", err)
-		}
-
-		path := path.Join(p.exportDir, options.PVName)
-
-		err = p.createDirectory(options.PVName, gid)
-		if err != nil {
-			return "", "", 0, "", 0, "", 0, fmt.Errorf("error creating directory for volume: %v", err)
-		}
-
-		exportBlock, exportId, err := p.createExport(options.PVName)
-		if err != nil {
-			os.RemoveAll(path)
-			return "", "", 0, "", 0, "", 0, fmt.Errorf("error creating export for volume: %v", err)
-		}
-
-		projectBlock, projectId, err := p.createQuota(options.PVName, options.Capacity)
-		if err != nil {
-			os.RemoveAll(path)
-			return "", "", 0, "", 0, "", 0, fmt.Errorf("error creating quota for volume: %v", err)
-		}
-
-		return server, path, 0, exportBlock, exportId, projectBlock, projectId, nil
-		*/
 }

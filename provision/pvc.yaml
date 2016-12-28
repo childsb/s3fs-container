@@ -4,6 +4,8 @@ metadata:
   name: sc-claim 
   annotations:
     volume.beta.kubernetes.io/storage-class: default-shared 
+    AWS_ACCESS_KEY_ID: yoursecretkeyid 
+    AWS_SECRET_ACCESS_KEY: yoursecretkey
 spec:
   accessModes:
     - ReadWriteMany
