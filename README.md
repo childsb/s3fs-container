@@ -1,11 +1,11 @@
 # s3fs-container
-This is an S3 volume driver for Kubernetes which uses the FLEX framework.  It also performs provisioning.
-
-The provisioner runs in a POD.
+This is an S3 volume driver for Kubernetes which uses the FLEX framework.  It also performs provisioning. The provisioner runs in a POD.
 
 To build the project:
 
-`make`
+```bash
+make
+```
 
 
 The s3 FLEX shell script is in flex/s3fs-container/
