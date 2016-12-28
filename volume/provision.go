@@ -187,22 +187,6 @@ func (p *s3fsProvisioner) createVolume(volumeOptions controller.VolumeOptions, c
 
 	glog.Infof("createVolume called..%v %v", volumeOptions, gid)
 
-	/*
-	var options string
-	wildBill, err := json.Marshal(volumeOptions)
-	if err != nil {
-		glog.Errorf("Failed to marshal plugin options, error: %s", err.Error())
-		return err
-	}
-	if len(wildBill) != 0 {
-		options = string(wildBill)
-	} else {
-		options = ""
-	}
-	*/
-
-	// Executable provider command.
-
 	s3bucket := claim.Annotations[annAwss3bucket]
 
 	if len(s3bucket)==0{

@@ -7,3 +7,4 @@
 /_output*/
 /_output
 s3fs-container
+/provision/pvc.yaml

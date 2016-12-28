@@ -41,6 +41,24 @@ ismounted() {
 	fi
 }
 
+delete(){
+    echo "delete() called" >> /tmp/s3fs-container.log
+    echo "using AWS_ACCESS_KEY_ID=${2} AWS_SECRET_ACCESS_KEY=${3}" >> /tmp/s3fs-container.log
+     #  provision bucket awskey_id awskey
+    AWS_COMMAND="AWS_ACCESS_KEY_ID=$2 AWS_SECRET_ACCESS_KEY=$3 /usr/local/bin/aws s3 rb s3://${1} --force"
+    echo "delete() called, running command: ${AWS_PROVISION_COMMAND}" >> /tmp/s3fs-container.log
+    RESULT=`eval ${AWS_COMMAND}`
+    if [ $? -eq 0 ]; then
+          echo "delete() success: ${RESULT} " >> /tmp/s3fs-container.log
+          log "{\"status\": \"Success\"}"
+          exit 0
+    else
+       echo "delete failed with: $RESULT " >> /tmp/s3fs-container.log
+       err "{\"status\": \"Failure\", \"message\": \"${RESULT}\"}"
+       exit 1
+    fi
+}
+
 provision(){
     echo "provision() called" >> /tmp/s3fs-container.log
     echo "using AWS_ACCESS_KEY_ID=${2} AWS_SECRET_ACCESS_KEY=${3}" >> /tmp/s3fs-container.log
@@ -140,6 +158,9 @@ case "$op" in
 	provision)
 		provision $*
 		;;
+	delete)
+        delete $*
+        ;;
 	mount)
 		domount $*
 		;;

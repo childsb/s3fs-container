@@ -17,9 +17,10 @@ limitations under the License.
 package volume
 
 import (
+	"github.com/golang/glog"
 	"fmt"
 	"strconv"
-
+	"os/exec"
 	"github.com/childsb/s3fs-container/controller"
 	"k8s.io/client-go/pkg/api/v1"
 )
@@ -30,6 +31,10 @@ func (p *s3fsProvisioner) Delete(volume *v1.PersistentVolume) error {
 	// Ignore the call if this provisioner was not the one to provision the
 	// volume. It doesn't even attempt to delete it, so it's neither a success
 	// (nil error) nor failure (any other error)
+
+
+	glog.Infof("Delete called for volume:" , volume.Name)
+
 	provisioned, err := p.provisioned(volume)
 	if err != nil {
 		return fmt.Errorf("error determining if this provisioner was the one to provision volume %q: %v", volume.Name, err)
@@ -39,7 +44,13 @@ func (p *s3fsProvisioner) Delete(volume *v1.PersistentVolume) error {
 		return &controller.IgnoredError{strerr}
 	}
 
-
+	cmd := exec.Command(p.execCommand, "delete", volume.Spec.FlexVolume.Options[annAwss3bucket], volume.Spec.FlexVolume.Options[annAwsAccessKeyId], volume.Spec.FlexVolume.Options[annAwsSecretAccessKey] )
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		glog.Errorf("Failed to delete volume %s, output: %s, error: %s",  volume.Spec.FlexVolume.Options[annAwss3bucket], output, err.Error())
+		//_, err := handleCmdResponse(mountCmd, output)
+		return err
+	}
 	return nil
 }
 
