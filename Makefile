@@ -25,12 +25,16 @@ else
     endif
 endif
 
-container: build quick-container
+container: build s3-container quick-container
 .PHONY: container
 
 clean:
 	rm -f s3fs-container
 .PHONY: clean
+
+s3-container:
+        docker build -t s3fs:latest mount/ 
+.PHONY: s3-container
 
 quick-container:
 	docker build -t childsb/s3fs-provisioner:latest . 
