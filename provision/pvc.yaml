@@ -1,7 +1,7 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: sc-claim 
+  name: pv1 
   annotations:
     volume.beta.kubernetes.io/storage-class: default-shared 
     AWS_ACCESS_KEY_ID: yoursecretkeyid 

@@ -19,6 +19,12 @@ kubectl create -f provision/pod.yaml
 To create a claim (which will get provisioend into a volume):
 kubectl create -f provision/pvc.yaml
 
+#Flex driver location
+The FLEX driver location is mostly hard coded.  I opened this PR to allow it specified in hack/local-up-cluster.sh
+
+https://github.com/kubernetes/kubernetes/pull/39054
+
+
 
 # s3fs-fuse
 The container uses s3fs-fuse found here: https://github.com/s3fs-fuse/s3fs-fuse
