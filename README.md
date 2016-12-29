@@ -27,8 +27,7 @@ FLEX_VOLUME_PLUGIN_DIR=/opt/go/src/github.com/childsb/s3fs-container/flex hack/l
 
 If you're running from something else, be sure to set the volume plugin path, or use the default path.  
 
-**Copy** 
-flex/s3fs-container/s3fs-container to <volume_plugin_path>/s3fs-container/s3fs-container
+Copy flex/s3fs-container/s3fs-container to *<volume_plugin_path>*/s3fs-container/s3fs-container
 
 So that kube can mount the S3 volumes with the FLEX script.
 
@@ -37,7 +36,7 @@ So that kube can mount the S3 volumes with the FLEX script.
 
 To create the provisioner:
 ```bash
-kubect
+kubect create -f provision/pod-provisioner.yaml
 ```
 
 To create a storage class:
