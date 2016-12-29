@@ -49,6 +49,7 @@ func (p *s3fsProvisioner) Delete(volume *v1.PersistentVolume) error {
 
 func (p *s3fsProvisioner) provisioned(volume *v1.PersistentVolume) (bool, error) {
 	provisionerId, ok := volume.Annotations[annProvisionerId]
+	glog.Infof("Provisioned called for volume:" , volume.Name)
 	if !ok {
 		return false, fmt.Errorf("PV doesn't have an annotation %s", annProvisionerId)
 	}
@@ -58,6 +59,7 @@ func (p *s3fsProvisioner) provisioned(volume *v1.PersistentVolume) (bool, error)
 
 func getBlockAndId(volume *v1.PersistentVolume, annBlock, annId string) (string, uint16, error) {
 	block, ok := volume.Annotations[annBlock]
+
 	if !ok {
 		return "", 0, fmt.Errorf("PV doesn't have an annotation with key %s", annBlock)
 	}

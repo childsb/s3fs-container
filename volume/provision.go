@@ -97,7 +97,7 @@ func (p *s3fsProvisioner) Provision(options controller.VolumeOptions, claim *v1.
 			PersistentVolumeSource: v1.PersistentVolumeSource{
 
 				FlexVolume: &v1.FlexVolumeSource{
-					Driver: "s3fs",
+					Driver: "s3fs-container",
 					Options: map[string]string{
 						annAwsAccessKeyId:claim.Annotations[annAwsAccessKeyId],
 						annAwsSecretAccessKey:claim.Annotations[annAwsSecretAccessKey],
@@ -109,7 +109,7 @@ func (p *s3fsProvisioner) Provision(options controller.VolumeOptions, claim *v1.
 			},
 		},
 	}
-
+	glog.Infof("Created PV %s", options.PVName)
 	return pv, nil
 }
 
@@ -123,11 +123,11 @@ func (p *s3fsProvisioner) createVolume(volumeOptions controller.VolumeOptions, c
 	cmd := exec.Command(p.execCommand, "provision", s3bucket, claim.Annotations[annAwsAccessKeyId], claim.Annotations[annAwsSecretAccessKey] )
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		glog.Errorf("Failed to create volume %s, output: %s, error: %s",  claim.Annotations[annAwss3bucket], output, err.Error())
+		glog.Errorf("Failed to create volume %s, output: %s, error: %s",  s3bucket, output, err.Error())
 		//_, err := handleCmdResponse(mountCmd, output)
 		return "", err
 	}
-
+	glog.Infof("Created s3 bucket %s", s3bucket)
 	return s3bucket, nil
 
 }
