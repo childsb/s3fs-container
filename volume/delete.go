@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strconv"
 	"os/exec"
-	"github.com/childsb/s3fs-container/controller"
+	"github.com/kubernetes-incubator/nfs-provisioner/controller"
 	"k8s.io/client-go/pkg/api/v1"
 )
 

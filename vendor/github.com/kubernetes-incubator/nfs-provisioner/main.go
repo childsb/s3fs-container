@@ -23,7 +23,8 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/kubernetes-incubator/nfs-provisioner/controller"
-	vol "github.com/childsb/s3fs-container/volume"
+	"github.com/kubernetes-incubator/nfs-provisioner/server"
+	vol "github.com/kubernetes-incubator/nfs-provisioner/volume"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/util/validation"
 	"k8s.io/client-go/pkg/util/validation/field"
@@ -33,17 +34,18 @@ import (
 )
 
 var (
-	provisioner    = flag.String("provisioner", "k8s.io/default", "Name of the provisioner. The provisioner will only provision volumes for claims that request a StorageClass with a provisioner field set equal to this name.")
+	provisioner    = flag.String("provisioner", "example.com/nfs", "Name of the provisioner. The provisioner will only provision volumes for claims that request a StorageClass with a provisioner field set equal to this name.")
 	master         = flag.String("master", "", "Master URL to build a client config from. Either this or kubeconfig needs to be set if the provisioner is being run out of cluster.")
 	kubeconfig     = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Either this or master needs to be set if the provisioner is being run out of cluster.")
-	execCommand    = flag.String("execCommand", "./flex/s3fs-container/s3fs-container", "The provisioner executable.")
-//	useGanesha     = flag.Bool("use-ganesha", true, "If the provisioner will create volumes using NFS Ganesha (D-Bus method calls) as opposed to using the kernel NFS server ('exportfs'). If run-server is true, this must be true. Default true.")
-//	gracePeriod    = flag.Uint("grace-period", 90, "NFS Ganesha grace period to use in seconds, from 0-180. If the server is not expected to survive restarts, i.e. it is running as a pod & its export directory is not persisted, this can be set to 0. Can only be set if both run-server and use-ganesha are true. Default 90.")
-//	enableXfsQuota = flag.Bool("enable-xfs-quota", false, "If the provisioner will set xfs quotas for each volume it provisions. Requires that the directory it creates volumes in ('/export') is xfs mounted with option prjquota/pquota, and that it has the privilege to run xfs_quota. Default false.")
+	runServer      = flag.Bool("run-server", true, "If the provisioner is responsible for running the NFS server, i.e. starting and stopping NFS Ganesha. Default true.")
+	useGanesha     = flag.Bool("use-ganesha", true, "If the provisioner will create volumes using NFS Ganesha (D-Bus method calls) as opposed to using the kernel NFS server ('exportfs'). If run-server is true, this must be true. Default true.")
+	gracePeriod    = flag.Uint("grace-period", 90, "NFS Ganesha grace period to use in seconds, from 0-180. If the server is not expected to survive restarts, i.e. it is running as a pod & its export directory is not persisted, this can be set to 0. Can only be set if both run-server and use-ganesha are true. Default 90.")
+	rootSquash     = flag.Bool("root-squash", false, "If the provisioner will squash root users by adding the NFS Ganesha root_id_squash or kernel root_squash option to each export. Default false.")
+	enableXfsQuota = flag.Bool("enable-xfs-quota", false, "If the provisioner will set xfs quotas for each volume it provisions. Requires that the directory it creates volumes in ('/export') is xfs mounted with option prjquota/pquota, and that it has the privilege to run xfs_quota. Default false.")
 )
 
-//const exportDir = "/export"
-//const ganeshaConfig = "/export/vfs.conf"
+const exportDir = "/export"
+const ganeshaConfig = "/export/vfs.conf"
 
 func main() {
 	flag.Set("logtostderr", "true")
@@ -54,18 +56,30 @@ func main() {
 	}
 	glog.Infof("Provisioner %s specified", *provisioner)
 
-	if execCommand==nil {
-		glog.Fatalf("Invalid flags specified: must provide provisioner exec command")
+	if *runServer && !*useGanesha {
+		glog.Fatalf("Invalid flags specified: if run-server is true, use-ganesha must also be true.")
+	}
+
+	if *gracePeriod != 90 && (!*runServer || !*useGanesha) {
+		glog.Fatalf("Invalid flags specified: custom grace period can only be set if both run-server and use-ganesha are true.")
+	} else if *gracePeriod > 180 && *runServer && *useGanesha {
+		glog.Fatalf("Invalid flags specified: custom grace period must be in the range 0-180")
+	}
+
+	if *runServer {
+		glog.Infof("Starting NFS server!")
+		err := server.Start(ganeshaConfig, *gracePeriod)
+		if err != nil {
+			glog.Fatalf("Error starting NFS server: %v", err)
+		}
 	}
 
 	// Create the client according to whether we are running in or out-of-cluster
 	var config *rest.Config
 	var err error
 	if *master != "" || *kubeconfig != "" {
-		glog.Infof("Either master or kubeconfig specified. building kube config from that..")
 		config, err = clientcmd.BuildConfigFromFlags(*master, *kubeconfig)
 	} else {
-		glog.Infof("Building kube configs for running in cluster...")
 		config, err = rest.InClusterConfig()
 	}
 	if err != nil {
@@ -85,10 +99,10 @@ func main() {
 
 	// Create the provisioner: it implements the Provisioner interface expected by
 	// the controller
-	s3fsProvisioner := vol.News3FSProvisioner(clientset, *execCommand)
+	nfsProvisioner := vol.NewNFSProvisioner(exportDir, clientset, *useGanesha, ganeshaConfig, *rootSquash, *enableXfsQuota)
 
 	// Start the provision controller which will dynamically provision NFS PVs
-	pc := controller.NewProvisionController(clientset, 15*time.Second, *provisioner, s3fsProvisioner, serverVersion.GitVersion, false)
+	pc := controller.NewProvisionController(clientset, 15*time.Second, *provisioner, nfsProvisioner, serverVersion.GitVersion, false)
 	pc.Run(wait.NeverStop)
 }
 

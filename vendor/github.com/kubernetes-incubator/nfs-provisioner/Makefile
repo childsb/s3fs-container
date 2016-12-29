@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+IMAGE = quay.io/kubernetes_incubator/nfs-provisioner
+
 VERSION :=
 TAG := $(shell git describe --abbrev=0 --tags HEAD 2>/dev/null)
 COMMIT := $(shell git rev-parse HEAD)
@@ -21,25 +23,39 @@ else
     ifeq ($(COMMIT), $(shell git rev-list -n1 $(TAG)))
         VERSION := $(TAG)
     else
-        VERSION := $(TAG)-$(COMMIT)
+        VERSION := latest
     endif
 endif
 
-container: build s3-container quick-container
+all build:
+	go build
+.PHONY: all build
+
+container: build quick-container
 .PHONY: container
 
-clean:
-	rm -f s3fs-container
-.PHONY: clean
-
-s3-container:
-	docker build -t s3fs:latest mount/ 
-.PHONY: s3-container
-
 quick-container:
-	docker build -t childsb/s3fs-provisioner:latest . 
+	cp nfs-provisioner deploy/docker/nfs-provisioner
+	docker build -t $(IMAGE):$(VERSION) deploy/docker
 .PHONY: quick-container
 
-all build:
-	go build 
-.PHONY: all build
+push: container
+	docker push $(IMAGE):$(VERSION)
+.PHONY: push
+
+test-integration: verify-gofmt
+	go test `go list ./... | grep -v 'vendor\|e2e'`
+.PHONY: test-integration
+
+test-e2e: verify-gofmt
+	go test ./e2e -v --kubeconfig=$(HOME)/.kube/config
+.PHONY: test-e2e
+
+verify-gofmt:
+	(gofmt -s -w -l `find . -type f -name "*.go" | grep -v vendor`) || exit 1
+.PHONY: verify-gofmt
+
+clean:
+	rm -f nfs-provisioner
+	rm -f deploy/docker/nfs-provisioner
+.PHONY: clean

@@ -20,7 +20,7 @@ import (
 
 	"github.com/golang/glog"
 	"os/exec"
-	"github.com/childsb/s3fs-container/controller"
+	"github.com/kubernetes-incubator/nfs-provisioner/controller"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
 	"k8s.io/client-go/pkg/types"

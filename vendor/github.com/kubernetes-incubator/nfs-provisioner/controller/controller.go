@@ -24,8 +24,8 @@ import (
 	"time"
 
 	"github.com/golang/glog"
-	"github.com/childsb/s3fs-container/controller/leaderelection"
-	rl "github.com/childsb/s3fs-container/controller/leaderelection/resourcelock"
+	"github.com/kubernetes-incubator/nfs-provisioner/controller/leaderelection"
+	rl "github.com/kubernetes-incubator/nfs-provisioner/controller/leaderelection/resourcelock"
 	"k8s.io/client-go/kubernetes"
 	core_v1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/pkg/api"
@@ -240,7 +240,7 @@ func NewProvisionController(
 }
 
 func (ctrl *ProvisionController) Run(stopCh <-chan struct{}) {
-	glog.Infof("Starting nfs provisioner controller %s!", string(ctrl.identity))
+	glog.Infof("Starting provisioner controller %s!", string(ctrl.identity))
 	go ctrl.claimController.Run(stopCh)
 	go ctrl.volumeController.Run(stopCh)
 	go ctrl.classReflector.RunUntil(stopCh)

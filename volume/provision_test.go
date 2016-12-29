@@ -28,7 +28,7 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/childsb/s3fs-container/controller"
+	"github.com/kubernetes-incubator/nfs-provisioner/controller"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/pkg/api/resource"
 	"k8s.io/client-go/pkg/api/unversioned"
