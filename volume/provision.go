@@ -71,8 +71,11 @@ var _ controller.Provisioner = &s3fsProvisioner{}
 
 // Provision creates a volume i.e. the storage asset and returns a PV object for
 // the volume.
-func (p *s3fsProvisioner) Provision(options controller.VolumeOptions, claim *v1.PersistentVolumeClaim) (*v1.PersistentVolume, error) {
+func (p *s3fsProvisioner) Provision(options controller.VolumeOptions) (*v1.PersistentVolume, error) {
+	claim := options.PVC
+
 	s3bucket, err := p.createVolume(options,claim)
+
 	if err != nil {
 		return nil, err
 	}
@@ -90,9 +93,9 @@ func (p *s3fsProvisioner) Provision(options controller.VolumeOptions, claim *v1.
 		},
 		Spec: v1.PersistentVolumeSpec{
 			PersistentVolumeReclaimPolicy: options.PersistentVolumeReclaimPolicy,
-			AccessModes:                   options.AccessModes,
+			AccessModes:                  options.PVC.Spec.AccessModes,
 			Capacity: v1.ResourceList{
-				v1.ResourceName(v1.ResourceStorage): options.Capacity,
+				v1.ResourceName(v1.ResourceStorage): options.PVC.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
 			},
 			PersistentVolumeSource: v1.PersistentVolumeSource{
 

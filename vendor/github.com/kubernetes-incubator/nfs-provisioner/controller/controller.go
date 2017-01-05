@@ -481,15 +481,14 @@ func (ctrl *ProvisionController) provisionClaimOperation(claim *v1.PersistentVol
 	}
 
 	options := VolumeOptions{
-		Capacity:    claim.Spec.Resources.Requests[v1.ResourceName(v1.ResourceStorage)],
-		AccessModes: claim.Spec.AccessModes,
 		// TODO SHOULD be set to `Delete` unless user manually congiures other reclaim policy.
 		PersistentVolumeReclaimPolicy: v1.PersistentVolumeReclaimDelete,
 		PVName:     pvName,
+		PVC:        claim,
 		Parameters: storageClass.Parameters,
 	}
 
-	volume, err = ctrl.provisioner.Provision(options, claim)
+	volume, err = ctrl.provisioner.Provision(options)
 	if err != nil {
 		strerr := fmt.Sprintf("Failed to provision volume with StorageClass %q: %v", storageClass.Name, err)
 		glog.Errorf("Failed to provision volume for claim %q with StorageClass %q: %v", claimToClaimKey(claim), storageClass.Name, err)

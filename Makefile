@@ -40,6 +40,10 @@ quick-container:
 	docker build -t childsb/s3fs-provisioner:latest . 
 .PHONY: quick-container
 
-all build:
+glide:
+	glide install -v
+.PHONY: glide
+
+all build: glide
 	go build 
 .PHONY: all build

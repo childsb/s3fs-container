@@ -20,7 +20,8 @@ import (
 	"time"
 
 	"k8s.io/kubernetes/pkg/api/resource"
-	"k8s.io/kubernetes/pkg/api/unversioned"
+	metav1 "k8s.io/kubernetes/pkg/apis/meta/v1"
+	genericapirequest "k8s.io/kubernetes/pkg/genericapiserver/api/request"
 )
 
 // Returns string version of ResourceName.
@@ -81,7 +82,7 @@ func GetExistingContainerStatus(statuses []ContainerStatus, name string) Contain
 // of that, there are two cases when a pod can be considered available:
 // 1. minReadySeconds == 0, or
 // 2. LastTransitionTime (is set) + minReadySeconds < current time
-func IsPodAvailable(pod *Pod, minReadySeconds int32, now unversioned.Time) bool {
+func IsPodAvailable(pod *Pod, minReadySeconds int32, now metav1.Time) bool {
 	if !IsPodReady(pod) {
 		return false
 	}
@@ -144,7 +145,7 @@ func GetNodeCondition(status *NodeStatus, conditionType NodeConditionType) (int,
 // status has changed.
 // Returns true if pod condition has changed or has been added.
 func UpdatePodCondition(status *PodStatus, condition *PodCondition) bool {
-	condition.LastTransitionTime = unversioned.Now()
+	condition.LastTransitionTime = metav1.Now()
 	// Try to find this pod condition.
 	conditionIndex, oldCondition := GetPodCondition(status, condition.Type)
 
@@ -226,4 +227,14 @@ func PodRequestsAndLimits(pod *Pod) (reqs map[ResourceName]resource.Quantity, li
 		}
 	}
 	return
+}
+
+// ValidNamespace returns false if the namespace on the context differs from the resource.  If the resource has no namespace, it is set to the value in the context.
+// TODO(sttts): move into pkg/genericapiserver/api
+func ValidNamespace(ctx genericapirequest.Context, resource *ObjectMeta) bool {
+	ns, ok := genericapirequest.NamespaceFrom(ctx)
+	if len(resource.Namespace) == 0 {
+		resource.Namespace = ns
+	}
+	return ns == resource.Namespace && ok
 }
