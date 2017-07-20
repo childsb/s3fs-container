@@ -36,7 +36,7 @@ So that kube can mount the S3 volumes with the FLEX script.
 
 To create the provisioner:
 ```bash
-kubect create -f provision/pod-provisioner.yaml
+kubectl create -f provision/pod-provisioner.yaml
 ```
 
 To create a storage class:
